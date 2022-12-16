@@ -2,6 +2,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { EOL, homedir } from 'os';
 import { createReadStream, constants } from 'node:fs';
+import { readdir } from 'node:fs/promises';
 import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -26,7 +27,7 @@ const logDirectory = async () => console.log(`${BREADCRUMBS_MESSAGE} ${cwd()}`);
 const logGoodbye = () => console.log(goodbyeText);
 
 const fn = new Transform({
-    transform(chunk, _, callback) {
+    async transform(chunk, _, callback) {
         const commandStr = String(chunk).trim();
         const spaceIndex = commandStr.indexOf(SPACE_SIGN);
         const hasSpace = spaceIndex !== -1;
@@ -37,9 +38,23 @@ const fn = new Transform({
             case '.exit':
                 exit(1);
             case 'ls':
+                const dir = await readdir(cwd(), { withFileTypes: true });
+
+                const sorted = dir
+                        .map((entity) => ({
+                            Name: entity.name,
+                            Type: entity.isDirectory() ? 'directory' : 'file'
+                        }))
+                        .sort((prev, next) => prev.Type === 'directory' ?
+                            -1 : next.Type === 'directory' ?
+                                1 : 0);
+
+                console.table(sorted);
+                callback();
                 break;
             case 'cd':
                 chdir(fileName);
+                callback();
                 break;
             case 'cat':
                 const url = new URL(`${__dirname}/${fileName}`);
@@ -51,6 +66,7 @@ const fn = new Transform({
                 break;
             default:
                 console.log(INVALID_MESSAGE);
+                callback();
                 break;
         }
 
