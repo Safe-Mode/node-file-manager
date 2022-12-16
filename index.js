@@ -56,6 +56,10 @@ const fn = new Transform({
                 chdir(fileName);
                 callback();
                 break;
+            case 'up':
+                chdir('../')
+                callback();
+                break;
             case 'cat':
                 const url = new URL(`${__dirname}/${fileName}`);
                 const readable = createReadStream(url.href);
