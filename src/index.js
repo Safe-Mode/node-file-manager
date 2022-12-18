@@ -7,39 +7,23 @@ import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const EQUAL_SIGN = '=';
-const EXCLAMATION_SIGN = '!';
-const SPACE_SIGN = ' ';
-const GREETING_MESSAGE = 'Welcome to the File Manager';
-const GRATITUDE_MESSAGE = 'Thank you for using File Manager';
-const GOODBYE_MESSAGE = 'goodbye';
-const BREADCRUMBS_MESSAGE = 'You are currently in';
-const INVALID_MESSAGE = 'Invalid input';
-const Command = {
-    EXIT: '.exit',
-    LS: 'ls',
-    CD: 'cd',
-    UP: 'up',
-    CAT: 'cat',
-    ADD: 'add',
-    RN: 'rn'
-};
+import { Sign, Command, Message } from './const.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const userNameArg = argv[2];
-const userName = userNameArg.slice(userNameArg.indexOf(EQUAL_SIGN) + 1);
-const greetingText = `${GREETING_MESSAGE}, ${userName}${EXCLAMATION_SIGN}`;
-const goodbyeText = `${GRATITUDE_MESSAGE}, ${userName}, ${GOODBYE_MESSAGE}${EXCLAMATION_SIGN}`;
+const userName = userNameArg.slice(userNameArg.indexOf(Sign.EQUAL) + 1);
+const greetingText = `${Message.GREETING}, ${userName}${Sign.EXCLAMATION}`;
+const goodbyeText = `${Message.GRATITUDE}, ${userName}, ${Message.GOODBYE}${Sign.EXCLAMATION}`;
 
-const logDirectory = async () => console.log(`${BREADCRUMBS_MESSAGE} ${cwd()}`);
+const logDirectory = async () => console.log(`${Message.BREADCRUMBS} ${cwd()}`);
 const logGoodbye = () => console.log(goodbyeText);
 const createFileUrl = (fileName) => `${cwd()}/${fileName}`;
 
 const fn = new Transform({
     async transform(chunk, _, callback) {
         const commandStr = String(chunk).trim();
-        const spaceIndex = commandStr.indexOf(SPACE_SIGN);
+        const spaceIndex = commandStr.indexOf(Sign.SPACE);
         const hasSpace = spaceIndex !== -1;
         const command = hasSpace ? commandStr.slice(0, spaceIndex) : commandStr;
         let fileName = hasSpace ? commandStr.slice(spaceIndex + 1) : '';
@@ -90,7 +74,7 @@ const fn = new Transform({
 
                 break;
             case Command.RN:
-                const nextSpaceIndex = commandStr.indexOf(SPACE_SIGN, spaceIndex + 1);
+                const nextSpaceIndex = commandStr.indexOf(Sign.SPACE, spaceIndex + 1);
                 const newFileName = commandStr.slice(nextSpaceIndex + 1);
                 
                 fileName = commandStr.slice(spaceIndex + 1, nextSpaceIndex);
@@ -99,7 +83,7 @@ const fn = new Transform({
 
                 break;
             default:
-                console.log(INVALID_MESSAGE);
+                console.log(Message.INVALID);
                 callback();
                 break;
         }
