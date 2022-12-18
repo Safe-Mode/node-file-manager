@@ -12,6 +12,11 @@ export const Message = {
     INVALID: 'Invalid input'
 };
 
+export const EntityType = {
+    DIR: 'directory',
+    FILE: 'file'
+};
+
 export const Command = {
     EXIT: '.exit',
     LS: 'ls',
@@ -19,5 +24,8 @@ export const Command = {
     UP: 'up',
     CAT: 'cat',
     ADD: 'add',
-    RN: 'rn'
+    RN: 'rn',
+    CP: 'cp',
+    MV: 'mv',
+    RM: 'rm'
 };

@@ -1,13 +1,13 @@
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { EOL, homedir } from 'os';
-import { createReadStream, constants } from 'node:fs';
-import { readdir, appendFile, rename } from 'node:fs/promises';
+import { createReadStream, createWriteStream, constants } from 'node:fs';
+import { readdir, appendFile, rename, rm } from 'node:fs/promises';
 import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import { Sign, Command, Message } from './const.js';
+import { Sign, Command, Message, EntityType } from './const.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,7 +18,18 @@ const goodbyeText = `${Message.GRATITUDE}, ${userName}, ${Message.GOODBYE}${Sign
 
 const logDirectory = async () => console.log(`${Message.BREADCRUMBS} ${cwd()}`);
 const logGoodbye = () => console.log(goodbyeText);
-const createFileUrl = (fileName) => `${cwd()}/${fileName}`;
+const getFileUrl = (fileName) => `${cwd()}/${fileName}`;
+const deleteFile = (fileName, callback) => rm(getFileUrl(fileName)).then(callback);
+
+const copyFile = (fileName, newDest, callback) => {
+    const cpUrl = getFileUrl(fileName);
+    const cpNewUrl = getFileUrl(`${newDest}/${fileName}`);
+    const cpReadable = createReadStream(cpUrl);
+    const cpWritable = createWriteStream(cpNewUrl);
+
+    cpReadable.pipe(cpWritable);
+    callback();
+};
 
 const fn = new Transform({
     async transform(chunk, _, callback) {
@@ -26,7 +37,14 @@ const fn = new Transform({
         const spaceIndex = commandStr.indexOf(Sign.SPACE);
         const hasSpace = spaceIndex !== -1;
         const command = hasSpace ? commandStr.slice(0, spaceIndex) : commandStr;
-        let fileName = hasSpace ? commandStr.slice(spaceIndex + 1) : '';
+        const nextSpaceIndex = commandStr.indexOf(Sign.SPACE, spaceIndex + 1);
+        const hasNextSpace = nextSpaceIndex !== -1;
+        let fileName = hasNextSpace ?
+                commandStr.slice(spaceIndex + 1, nextSpaceIndex) :
+                hasSpace ?
+                    commandStr.slice(spaceIndex + 1) :
+                    '';
+        let newDest = hasNextSpace ? commandStr.slice(nextSpaceIndex + 1) : '';
 
         switch (command) {
             case Command.EXIT:
@@ -37,10 +55,10 @@ const fn = new Transform({
                 const sorted = dir
                         .map((entity) => ({
                             Name: entity.name,
-                            Type: entity.isDirectory() ? 'directory' : 'file'
+                            Type: entity.isDirectory() ? EntityType.DIR : EntityType.FILE
                         }))
-                        .sort((prev, next) => prev.Type === 'directory' ?
-                            -1 : next.Type === 'directory' ?
+                        .sort((prev, next) => prev.Type === EntityType.DIR ?
+                            -1 : next.Type === EntityType.DIR ?
                                 1 : 0);
 
                 console.table(sorted);
@@ -58,29 +76,36 @@ const fn = new Transform({
 
                 break;
             case Command.CAT:
-                const url = createFileUrl(fileName);
-                const readable = createReadStream(url);
+                const catUrl = getFileUrl(fileName);
+                const catReadable = createReadStream(catUrl);
                 
-                readable.on('data', (chunk) => {
+                catReadable.on('data', (chunk) => {
                     callback(null, `${chunk}${EOL}`);
                 });
 
                 break;
             case Command.ADD:
-                const fileUrl = createFileUrl(fileName);
+                const fileUrl = getFileUrl(fileName);
 
                 appendFile(fileUrl, '');
                 callback();
 
                 break;
             case Command.RN:
-                const nextSpaceIndex = commandStr.indexOf(Sign.SPACE, spaceIndex + 1);
-                const newFileName = commandStr.slice(nextSpaceIndex + 1);
-                
                 fileName = commandStr.slice(spaceIndex + 1, nextSpaceIndex);
-                rename(createFileUrl(fileName), createFileUrl(newFileName));
+                rename(getFileUrl(fileName), getFileUrl(newDest));
                 callback();
 
+                break;
+            case Command.CP:
+                copyFile(fileName, newDest, callback);
+                break;
+            case Command.MV:
+                const deleteFileAndExecCb = () => deleteFile(fileName, callback);
+                copyFile(fileName, newDest, deleteFileAndExecCb);
+                break;
+            case Command.RM:
+                deleteFile(fileName, callback);
                 break;
             default:
                 console.log(Message.INVALID);
