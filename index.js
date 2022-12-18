@@ -2,7 +2,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { EOL, homedir } from 'os';
 import { createReadStream, constants } from 'node:fs';
-import { readdir } from 'node:fs/promises';
+import { readdir, appendFile } from 'node:fs/promises';
 import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -15,6 +15,14 @@ const GRATITUDE_MESSAGE = 'Thank you for using File Manager';
 const GOODBYE_MESSAGE = 'goodbye';
 const BREADCRUMBS_MESSAGE = 'You are currently in';
 const INVALID_MESSAGE = 'Invalid input';
+const Command = {
+    EXIT: '.exit',
+    LS: 'ls',
+    CD: 'cd',
+    UP: 'up',
+    CAT: 'cat',
+    ADD: 'add',
+};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,6 +33,7 @@ const goodbyeText = `${GRATITUDE_MESSAGE}, ${userName}, ${GOODBYE_MESSAGE}${EXCL
 
 const logDirectory = async () => console.log(`${BREADCRUMBS_MESSAGE} ${cwd()}`);
 const logGoodbye = () => console.log(goodbyeText);
+const createFileUrl = (fileName) => `${cwd()}/${fileName}`;
 
 const fn = new Transform({
     async transform(chunk, _, callback) {
@@ -35,9 +44,9 @@ const fn = new Transform({
         const fileName = commandStr.slice(spaceIndex + 1);
 
         switch (command) {
-            case '.exit':
+            case Command.EXIT:
                 exit(1);
-            case 'ls':
+            case Command.LS:
                 const dir = await readdir(cwd(), { withFileTypes: true });
 
                 const sorted = dir
@@ -51,22 +60,33 @@ const fn = new Transform({
 
                 console.table(sorted);
                 callback();
+
                 break;
-            case 'cd':
+            case Command.CD:
                 chdir(fileName);
                 callback();
+
                 break;
-            case 'up':
-                chdir('../')
+            case Command.UP:
+                chdir('../');
                 callback();
+
                 break;
-            case 'cat':
-                const url = new URL(`${__dirname}/${fileName}`);
-                const readable = createReadStream(url.href);
+            case Command.CAT:
+                const url = createFileUrl(fileName);
+                const readable = createReadStream(url);
                 
                 readable.on('data', (chunk) => {
                     callback(null, `${chunk}${EOL}`);
                 });
+
+                break;
+            case Command.ADD:
+                const fileUrl = createFileUrl(fileName);
+
+                appendFile(fileUrl, '');
+                callback();
+
                 break;
             default:
                 console.log(INVALID_MESSAGE);
