@@ -2,7 +2,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { EOL, homedir } from 'os';
 import { createReadStream, constants } from 'node:fs';
-import { readdir, appendFile } from 'node:fs/promises';
+import { readdir, appendFile, rename } from 'node:fs/promises';
 import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -22,6 +22,7 @@ const Command = {
     UP: 'up',
     CAT: 'cat',
     ADD: 'add',
+    RN: 'rn'
 };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,7 +42,7 @@ const fn = new Transform({
         const spaceIndex = commandStr.indexOf(SPACE_SIGN);
         const hasSpace = spaceIndex !== -1;
         const command = hasSpace ? commandStr.slice(0, spaceIndex) : commandStr;
-        const fileName = commandStr.slice(spaceIndex + 1);
+        let fileName = hasSpace ? commandStr.slice(spaceIndex + 1) : '';
 
         switch (command) {
             case Command.EXIT:
@@ -85,6 +86,15 @@ const fn = new Transform({
                 const fileUrl = createFileUrl(fileName);
 
                 appendFile(fileUrl, '');
+                callback();
+
+                break;
+            case Command.RN:
+                const nextSpaceIndex = commandStr.indexOf(SPACE_SIGN, spaceIndex + 1);
+                const newFileName = commandStr.slice(nextSpaceIndex + 1);
+                
+                fileName = commandStr.slice(spaceIndex + 1, nextSpaceIndex);
+                rename(createFileUrl(fileName), createFileUrl(newFileName));
                 callback();
 
                 break;
