@@ -1,13 +1,16 @@
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { EOL, homedir } from 'os';
+import { EOL, homedir, cpus, userInfo, arch } from 'os';
 import { createReadStream, createWriteStream, constants } from 'node:fs';
 import { readdir, appendFile, rename, rm } from 'node:fs/promises';
 import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import { Sign, Command, Message, EntityType } from './const.js';
+import { Sign, Command, Message, EntityType, OsParams } from './const.js';
+
+const ROUND_PRECISION = 2;
+const CPU_RATE_DIVIDER = 1000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,6 +18,11 @@ const userNameArg = argv[2];
 const userName = userNameArg.slice(userNameArg.indexOf(Sign.EQUAL) + 1);
 const greetingText = `${Message.GREETING}, ${userName}${Sign.EXCLAMATION}`;
 const goodbyeText = `${Message.GRATITUDE}, ${userName}, ${Message.GOODBYE}${Sign.EXCLAMATION}`;
+
+const round = (num, precision) => {
+    const modifier = 10 ** precision;
+    return Math.round(num * modifier) / modifier;
+};
 
 const logDirectory = async () => console.log(`${Message.BREADCRUMBS} ${cwd()}`);
 const logGoodbye = () => console.log(goodbyeText);
@@ -106,6 +114,34 @@ const fn = new Transform({
                 break;
             case Command.RM:
                 deleteFile(fileName, callback);
+                break;
+            case Command.OS:
+                switch (fileName) {
+                    case OsParams.EOL:
+                        console.log(JSON.stringify(EOL));
+                        break;
+                    case OsParams.CPUS:
+                        const cpuInfo = cpus().map((core) => ({
+                            Model: core.model,
+                            'Clock Rate (GHz)': round(core.speed / CPU_RATE_DIVIDER, ROUND_PRECISION)
+                        }));
+
+                        console.table(cpuInfo);
+                        break;
+                    case OsParams.HOMEDIR:
+                        console.log(homedir());
+                        break;
+                    case OsParams.USERNAME:
+                        console.log(userInfo().username);
+                        break;
+                    case OsParams.ARCH:
+                        console.log(arch());
+                        break;
+                    default:
+                        break;
+                }
+
+                callback();
                 break;
             default:
                 console.log(Message.INVALID);

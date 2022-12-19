@@ -27,5 +27,14 @@ export const Command = {
     RN: 'rn',
     CP: 'cp',
     MV: 'mv',
-    RM: 'rm'
+    RM: 'rm',
+    OS: 'os'
+};
+
+export const OsParams = {
+    EOL: '--EOL',
+    CPUS: '--cpus',
+    HOMEDIR: '--homedir',
+    USERNAME: '--username',
+    ARCH: '--architecture'
 };
