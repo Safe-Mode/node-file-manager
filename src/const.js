@@ -1,7 +1,8 @@
 export const Sign = {
     EQUAL: '=',
     EXCLAMATION: '!',
-    SPACE: ' '
+    SPACE: ' ',
+    DOT: '.'
 };
 
 export const Message = {
@@ -29,7 +30,9 @@ export const Command = {
     MV: 'mv',
     RM: 'rm',
     OS: 'os',
-    HASH: 'hash'
+    HASH: 'hash',
+    COMPRESS: 'compress',
+    DECOMPRESS: 'decompress'
 };
 
 export const OsParams = {

@@ -7,6 +7,7 @@ import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createHash } from 'node:crypto';
+import { createBrotliCompress, createBrotliDecompress } from 'node:zlib';
 
 import { Sign, Command, Message, EntityType, OsParams } from './const.js';
 
@@ -72,17 +73,14 @@ const fn = new Transform({
 
                 console.table(sorted);
                 callback();
-
                 break;
             case Command.CD:
                 chdir(fileName);
                 callback();
-
                 break;
             case Command.UP:
                 chdir('../');
                 callback();
-
                 break;
             case Command.CAT:
                 const catUrl = getFileUrl(fileName);
@@ -98,13 +96,11 @@ const fn = new Transform({
 
                 appendFile(fileUrl, '');
                 callback();
-
                 break;
             case Command.RN:
                 fileName = commandStr.slice(spaceIndex + 1, nextSpaceIndex);
                 rename(getFileUrl(fileName), getFileUrl(newDest));
                 callback();
-
                 break;
             case Command.CP:
                 copyFile(fileName, newDest, callback);
@@ -156,6 +152,33 @@ const fn = new Transform({
                     .setEncoding('hex')
                     .pipe(stdout);
 
+                callback();
+                break;
+            case Command.COMPRESS:
+                const compressUrl = getFileUrl(fileName);
+                const destCompressUrl = getFileUrl(`${newDest}` || `${fileName}.br`);
+                const compressSource = createReadStream(compressUrl);
+                const compress = createBrotliCompress();
+                const compressDest = createWriteStream(destCompressUrl);
+
+                compressSource
+                    .pipe(compress)
+                    .pipe(compressDest);
+
+                callback();
+                break;
+            case Command.DECOMPRESS:
+                const decompressUrl = getFileUrl(fileName);
+                const lastDotIndex = fileName.lastIndexOf(Sign.DOT);
+                const destDecompressUrl = getFileUrl(newDest || fileName.slice(0, lastDotIndex));
+                const decompressSource = createReadStream(decompressUrl);
+                const decompress = createBrotliDecompress();
+                const decompressDest = createWriteStream(destDecompressUrl);
+
+                decompressSource
+                    .pipe(decompress)
+                    .pipe(decompressDest);
+                    
                 callback();
                 break;
             default:
