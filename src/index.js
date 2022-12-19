@@ -1,28 +1,20 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { EOL, homedir, cpus, userInfo, arch } from 'os';
-import { createReadStream, createWriteStream, constants } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { readdir, appendFile, rename, rm } from 'node:fs/promises';
 import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 import { createHash } from 'node:crypto';
 import { createBrotliCompress, createBrotliDecompress } from 'node:zlib';
 
-import { Sign, Command, Message, EntityType, OsParams } from './const.js';
+import { Sign, Command, Message, EntityType, OsParams, ROUND_PRECISION, CPU_RATE_DIVIDER, DEC_DIGIT } from './const.js';
 
-const ROUND_PRECISION = 2;
-const CPU_RATE_DIVIDER = 1000;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const userNameArg = argv[2];
 const userName = userNameArg.slice(userNameArg.indexOf(Sign.EQUAL) + 1);
 const greetingText = `${Message.GREETING}, ${userName}${Sign.EXCLAMATION}`;
 const goodbyeText = `${Message.GRATITUDE}, ${userName}, ${Message.GOODBYE}${Sign.EXCLAMATION}`;
 
 const round = (num, precision) => {
-    const modifier = 10 ** precision;
+    const modifier = DEC_DIGIT ** precision;
     return Math.round(num * modifier) / modifier;
 };
 
@@ -178,7 +170,7 @@ const fn = new Transform({
                 decompressSource
                     .pipe(decompress)
                     .pipe(decompressDest);
-                    
+
                 callback();
                 break;
             default:
@@ -191,19 +183,17 @@ const fn = new Transform({
     }
 });
 
-const startJob = async () => {
+const startJob = () => {
     console.log(greetingText);
     chdir(homedir());
     logDirectory();
 
-    await pipeline(
-        stdin,
-        fn,
-        stdout
-    );
+    stdin
+        .pipe(fn)
+        .pipe(stdout);
 };
 
 process.on('SIGINT', exit);
 process.on('exit', logGoodbye);
 
-startJob().catch(console.error);
+startJob();

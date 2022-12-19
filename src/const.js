@@ -1,3 +1,7 @@
+export const ROUND_PRECISION = 2;
+export const CPU_RATE_DIVIDER = 1000;
+export const DEC_DIGIT = 10;
+
 export const Sign = {
     EQUAL: '=',
     EXCLAMATION: '!',
