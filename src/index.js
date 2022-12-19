@@ -6,6 +6,7 @@ import { readdir, appendFile, rename, rm } from 'node:fs/promises';
 import { argv, stdin, stdout, exit, cwd, chdir } from 'node:process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { createHash } from 'node:crypto';
 
 import { Sign, Command, Message, EntityType, OsParams } from './const.js';
 
@@ -116,7 +117,9 @@ const fn = new Transform({
                 deleteFile(fileName, callback);
                 break;
             case Command.OS:
-                switch (fileName) {
+                const osParam = fileName;
+
+                switch (osParam) {
                     case OsParams.EOL:
                         console.log(JSON.stringify(EOL));
                         break;
@@ -140,6 +143,18 @@ const fn = new Transform({
                     default:
                         break;
                 }
+
+                callback();
+                break;
+            case Command.HASH:
+                const hashUrl = getFileUrl(fileName);
+                const hash = createHash('sha256');
+                const hashReadable = createReadStream(hashUrl);
+
+                hashReadable
+                    .pipe(hash)
+                    .setEncoding('hex')
+                    .pipe(stdout);
 
                 callback();
                 break;
