@@ -102,11 +102,13 @@ List of operations and their syntax:
 - Compress and decompress operations  
     - Compress file (using Brotli algorithm, should be done using Streams API)  
     ```bash
-    compress path_to_file path_to_destination
+    compress path_to_file path_to_destination*
     ```
     - Decompress file (using Brotli algorithm, should be done using Streams API)  
     ```bash
-    decompress path_to_file path_to_destination
-    ```  
+    decompress path_to_file path_to_destination*
+    ```
+    *where path_to_destination should contain the name of new file or could be empty.
+    If it's empty, manager will create file in the current working directory with the filename looks like source_filename.br
     NB! After decompressing of previously compressed file result should not differ with originally compressed file
     
